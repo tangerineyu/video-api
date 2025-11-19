@@ -16,7 +16,8 @@ func main() {
 
 	userService := service.NewUserService(userRepo, database.RDB, database.Ctx)
 
-}	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService)
 
 	r := router.SetupRouter(userHandler)
 	r.Run(":8080")
+}

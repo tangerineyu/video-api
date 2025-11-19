@@ -1,10 +1,11 @@
 package database
 
 import (
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 	"log"
 	"video-api/model"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
@@ -24,6 +25,7 @@ func InitDB() {
 	}
 	err = DB.AutoMigrate(
 		&model.User{},
+		&model.Video{},
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
