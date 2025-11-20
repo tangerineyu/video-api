@@ -13,11 +13,14 @@ func main() {
 	database.InitRedis()
 
 	userRepo := repository.NewUserRepository(database.DB)
+	videoRepo := repository.NewVideoRepository(database.DB)
 
 	userService := service.NewUserService(userRepo, database.RDB, database.Ctx)
+	videoService := service.NewVideoService(userRepo, videoRepo, database.RDB, database.Ctx)
 
 	userHandler := handler.NewUserHandler(userService)
+	videoHandler := handler.NewVideoHandler(videoService)
 
-	r := router.SetupRouter(userHandler)
+	r := router.SetupRouter(userHandler, videoHandler)
 	r.Run(":8080")
 }

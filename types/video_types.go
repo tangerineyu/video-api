@@ -5,9 +5,9 @@ type VideoInfo struct {
 	Author        UserInfoResponse `json:"author"`
 	PlayURL       string           `json:"play_url"`
 	CoverURL      string           `json:"cover_url"`
-	FavoriteCount int64            `json:"favorite_count"`
-	CommentCount  int64            `json:"comment_count"`
-	IsFavourite   bool             `json:"is_favourite"`
+	FavoriteCount int              `json:"favorite_count"`
+	CommentCount  int              `json:"comment_count"`
+	IsFavorite    bool             `json:"is_favourite"`
 	Title         string           `json:"title"`
 }
 type FeedResponse struct {
