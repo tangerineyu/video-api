@@ -26,6 +26,9 @@ func InitDB() {
 	err = DB.AutoMigrate(
 		&model.User{},
 		&model.Video{},
+		&model.Comment{},
+		&model.UserFavorite{},
+		&model.UserRelation{},
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
