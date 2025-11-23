@@ -76,6 +76,7 @@ func (s SocialService) GetFriendList(userID, currentUserID uint) (*types.UserLis
 func NewSocialService(socialRepo repository.ISocialRepository, userRepo repository.IUserRepository, rdb *redis.Client, ctx context.Context) ISocialService {
 	return &SocialService{
 		SocialRepo: socialRepo,
+		UsrRepo:    userRepo,
 		rdb:        rdb,
 		ctx:        ctx,
 	}

@@ -87,7 +87,7 @@ func (h *SocialHandler) FollowerList(c *gin.Context) {
 }
 
 // 好友列表
-//GET /relation/friend/list/?user_id=1
+// GET /relation/friend/list/?user_id=1
 func (h *SocialHandler) FriendList(c *gin.Context) {
 	targetUserIDStr := c.Query("user_id")
 	targetUserID, _ := strconv.ParseUint(targetUserIDStr, 10, 64)

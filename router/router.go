@@ -10,6 +10,8 @@ import (
 func SetupRouter(
 	userHandler *handler.UserHandler,
 	videoHandler *handler.VideoHandler,
+	interactionHandler *handler.InteractionHandler,
+	socialHandler *handler.SocialHandler,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Static("/static", "./uploads")
@@ -29,6 +31,23 @@ func SetupRouter(
 	{
 		publishGroup.POST("action/", middleware.AuthMiddleware(), videoHandler.Publish)
 		publishGroup.GET("list/", middleware.AuthMiddleware(), videoHandler.List)
+	}
+	favoriteGroup := apigroup.Group("favorite")
+	{
+		favoriteGroup.POST("action/", middleware.AuthMiddleware(), interactionHandler.FavoriteAction)
+		favoriteGroup.GET("list/", middleware.AuthMiddleware(), interactionHandler.FavoriteList)
+	}
+	commentGroup := r.Group("comment")
+	{
+		commentGroup.POST("action/", middleware.AuthMiddleware(), interactionHandler.CommentAction)
+		commentGroup.GET("list/", interactionHandler.CommentList)
+	}
+	relationGroup := apigroup.Group("relation")
+	{
+		relationGroup.POST("action/", middleware.AuthMiddleware(), socialHandler.RelationAction)
+		relationGroup.GET("follow/list/", socialHandler.FollowList)
+		relationGroup.GET("follower/list/", socialHandler.FollowerList)
+		relationGroup.GET("friend/list/", middleware.AuthMiddleware(), socialHandler.FriendList)
 	}
 
 	return r

@@ -27,7 +27,7 @@ func (v *VideoService) GetPublishList(targetUserID uint, currentUserID uint) (*t
 	}, nil
 }
 
-func (v VideoService) PublishVideo(userID uint, title, plyPath, coverPath string) error {
+func (v *VideoService) PublishVideo(userID uint, title, plyPath, coverPath string) error {
 	video := &model.Video{
 		UserID:      userID,
 		Title:       title,
