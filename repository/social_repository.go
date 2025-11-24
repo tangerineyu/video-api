@@ -60,7 +60,7 @@ func (s socialRepository) ActionUnfollow(userID, followID uint) error {
 func (s socialRepository) GetFollowList(userID uint) ([]model.User, error) {
 	//TODO implement me
 	var users []model.User
-	err := s.db.Joins("JOIN user_relations ON user_relations.follow_id = users.user_id").
+	err := s.db.Joins("JOIN user_relations ON user_relations.follow_id = users.id").
 		Where("user_relations.user_id = ?", userID).
 		Find(&users).Error
 	return users, err
@@ -69,14 +69,14 @@ func (s socialRepository) GetFollowList(userID uint) ([]model.User, error) {
 func (s socialRepository) GetFollowerList(userID uint) ([]model.User, error) {
 	//TODO implement me
 	var users []model.User
-	err := s.db.Joins("JOIN user_relations ON user_relations.user_id = users.user_id").
+	err := s.db.Joins("JOIN user_relations ON user_relations.user_id = users.id").
 		Where("user_relations.follow_id = ?", userID).
 		Find(&users).Error
 	return users, err
 }
 
 func (s socialRepository) GetFriendList(userID uint) ([]model.User, error) {
-	//TODO implement me
+
 	var friends []model.User
 	err := s.db.Raw(`
 		SELECT u.* FROM users u

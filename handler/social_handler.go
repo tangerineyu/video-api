@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"video-api/service"
@@ -21,24 +22,29 @@ func NewSocialHandler(svc service.ISocialService) *SocialHandler {
 // 关注/取消关注
 func (h *SocialHandler) RelationAction(c *gin.Context) {
 	userID, ok := getUserID(c)
+	fmt.Println("社交操作，当前用户ID：", userID)
 	if !ok {
 		return
 	}
-	toUserID, ok := getUserID(c)
-	if !ok {
+	toUserIDStr := c.Query("to_user_id")
+	toUserIDUint, err := strconv.ParseUint(toUserIDStr, 10, 64)
+	if err != nil || toUserIDUint == 0 {
+		ValidationError(c, "INVALID_PARAM", "无效的请求参数", "to_user_id参数错误")
 		return
 	}
+	toUserID := uint(toUserIDUint)
+	fmt.Println("目标用户ID：", toUserID)
 	actionTypeStr := c.Query("action_type")
 	actionType, _ := strconv.Atoi(actionTypeStr)
 	if (actionType != 1 && actionType != 2) || toUserID == 0 {
 		ValidationError(c, "INVALID_PARAM", "无效的请求参数", "action_type参数错误")
 		return
 	}
-	if uint(toUserID) == userID {
+	if toUserID == userID {
 		Error(c, http.StatusBadRequest, "ACTION_INVALID", "不能关注自己")
 		return
 	}
-	err := h.socialService.RelationAction(userID, toUserID, actionType)
+	err = h.socialService.RelationAction(userID, toUserID, actionType)
 	if err != nil {
 		Error(c, http.StatusInternalServerError, "ACTION_FAILED", err.Error())
 		return

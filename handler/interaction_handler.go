@@ -77,30 +77,29 @@ func (h *InteractionHandler) CommentAction(c *gin.Context) {
 		if content == "" {
 			ValidationError(c, "VALIDATION_FAILED", "参数错误", "评论内容不能为空")
 			return
-		} else if actionType == 2 {
-			commentIDStr := c.Query("comment_id")
-			cid, _ := strconv.ParseUint(commentIDStr, 10, 64)
-			commentID = uint(cid)
-			if commentID == 0 {
-				ValidationError(c, "VALIDATION_FAILED", "参数错误", "评论ID不能为空")
-				return
-			}
-
-		} else {
-			ValidationError(c, "VALIDATION_FAILED", "无效的请求参数", "action_type参数错误")
+		}
+	} else if actionType == 2 {
+		commentIDStr := c.Query("comment_id")
+		cid, _ := strconv.ParseUint(commentIDStr, 10, 64)
+		commentID = uint(cid)
+		if commentID == 0 {
+			ValidationError(c, "VALIDATION_FAILED", "参数错误", "评论ID不能为空")
 			return
 		}
-		commentInfo, err := h.interactionService.CommentAction(userID, uint(videoID), actionType, content, commentID)
-		if err != nil {
-			Error(c, http.StatusInternalServerError, "ACTION_FAILED", err.Error())
-			return
-		}
-		if actionType == 1 {
-			Success(c, http.StatusOK, commentInfo)
-		} else {
-			Success(c, http.StatusOK, gin.H{"msg": "删除评论成功"})
-		}
 
+	} else {
+		ValidationError(c, "VALIDATION_FAILED", "无效的请求参数", "action_type参数错误")
+		return
+	}
+	commentInfo, err := h.interactionService.CommentAction(userID, uint(videoID), actionType, content, commentID)
+	if err != nil {
+		Error(c, http.StatusInternalServerError, "ACTION_FAILED", err.Error())
+		return
+	}
+	if actionType == 1 {
+		Success(c, http.StatusOK, commentInfo)
+	} else {
+		Success(c, http.StatusOK, gin.H{"msg": "删除评论成功"})
 	}
 
 }
