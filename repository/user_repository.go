@@ -1,8 +1,9 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"video-api/model"
+
+	"gorm.io/gorm"
 )
 
 type IUserRepository interface {
@@ -31,6 +32,12 @@ func (r *userRepository) UpdateAvatar(userID uint, avatarUrl string) error {
 	return r.db.Model(&model.User{}).Where("id = ?", userID).Update("avatar", avatarUrl).Error
 }
 
+func (r *userRepository) EnableMFA(userID uint, secret string) error {
+	return r.db.Model(&model.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"mfa_secret":  secret,
+		"mfa_enabled": true,
+	}).Error
+}
 func NewUserRepository(db *gorm.DB) IUserRepository {
 	return &userRepository{db: db}
 }

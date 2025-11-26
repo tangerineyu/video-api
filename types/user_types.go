@@ -28,3 +28,15 @@ type UserInfoResponse struct {
 	IsFollow      bool   `json:"is_follow"`
 	Avatar        string `json:"avatar"`
 }
+
+// Mfa生成响应
+type MfaGenerateResponse struct {
+	Secret string `json:"secret"`
+	Qrcode string `json:"qrcode_url"`
+}
+
+// MFA绑定请求
+type MfaBindRequest struct {
+	Secret string `json:"secret" binding:"required"`
+	Code   string `json:"code" binding:"required"`
+}

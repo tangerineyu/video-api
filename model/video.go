@@ -16,4 +16,7 @@ type Video struct {
 	FavoriteCount int    `gorm:"default:0"`
 	CommentCount  int    `gorm:"default:0"`
 	PublishTime   time.Time
+	//描述和点击量
+	Description string `gorm:"type:text"`
+	Views       int    `gorm:"default:0"`
 }

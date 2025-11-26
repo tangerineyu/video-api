@@ -10,4 +10,7 @@ type User struct {
 	Avatar        string
 	FollowCount   int64 `gorm:"default:0"`
 	FollowerCount int64 `gorm:"default:0"`
+	//MFA
+	MfaSecret  string `gorm:"default:''"`
+	MfaEnabled bool   `gorm:"default:false"`
 }

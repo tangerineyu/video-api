@@ -10,6 +10,7 @@ import (
 	"video-api/repository"
 	"video-api/types"
 
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -19,11 +20,36 @@ type IUserService interface {
 	Login(req *types.LoginRequest) (*types.LoginResponse, error)
 	GetUserInfo(currentUserID uint, targetUserId uint) (*types.UserInfoResponse, error)
 	UploadAvatar(userID uint, avatarUrl string) error
+	GenerateMFA(userID uint) (*types.MfaGenerateResponse, error)
+	BindMFA(userID uint, secret string, code string) error
 }
 type UserService struct {
 	userRepo repository.IUserRepository
 	rdb      *redis.Client
 	ctx      context.Context
+}
+
+func (s *UserService) GenerateMFA(userID uint) (*types.MfaGenerateResponse, error) {
+	user, _ := s.userRepo.FindUserByID(userID)
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "FanOneVideo",
+		AccountName: user.Username,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &types.MfaGenerateResponse{
+		Secret: key.Secret(),
+		Qrcode: key.URL(),
+	}, nil
+}
+
+func (s *UserService) BindMFA(userID uint, secret string, code string) error {
+	valid := totp.Validate(code, secret)
+	if !valid {
+		return errors.New("invalid mfa code")
+	}
+	return s.userRepo.EnableMFA(userID, secret)
 }
 
 func (s *UserService) generateAndstoreTokens(user *model.User) (*types.LoginResponse, error) {
