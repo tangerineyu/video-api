@@ -72,12 +72,12 @@ func (h *VideoHandler) Feed(c *gin.Context) {
 }
 func (h *VideoHandler) List(c *gin.Context) {
 	targetUserIDstr := c.Query("user_id")
-	targerUserID, _ := strconv.ParseUint(targetUserIDstr, 10, 64)
+	targetUserID, _ := strconv.ParseUint(targetUserIDstr, 10, 64)
 	var currentUserID uint = 0
 	if id, exists := c.Get("userID"); exists {
 		currentUserID = id.(uint)
 	}
-	resp, err := h.videoService.GetPublishList(uint(targerUserID), currentUserID)
+	resp, err := h.videoService.GetPublishList(uint(targetUserID), currentUserID)
 	if err != nil {
 		Error(c, http.StatusInternalServerError, "DB_ERROR", "获取发布列表失败")
 		return

@@ -16,6 +16,7 @@ FROM alpine:latest
 # 设置工作目录
 WORKDIR /app
 
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 # 安装必要的系统库
 RUN apk --no-cache add ca-certificates tzdata
 # 从构建阶段复制二进制文件

@@ -12,6 +12,7 @@ func SetupRouter(
 	videoHandler *handler.VideoHandler,
 	interactionHandler *handler.InteractionHandler,
 	socialHandler *handler.SocialHandler,
+	chatHandler *handler.ChatHandler,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Static("/static", "./uploads")
@@ -51,6 +52,11 @@ func SetupRouter(
 		relationGroup.GET("follow/list/", socialHandler.FollowList)
 		relationGroup.GET("follower/list/", socialHandler.FollowerList)
 		relationGroup.GET("friend/list/", middleware.AuthMiddleware(), socialHandler.FriendList)
+	}
+	chatGroup := r.Group("chat")
+	{
+		chatGroup.GET("ws", chatHandler.Connect)
+		chatGroup.GET("history", middleware.AuthMiddleware(), chatHandler.GetHistory)
 	}
 	// 模拟点击
 	apigroup.POST("video/visit/:id", videoHandler.VisitVideo)
