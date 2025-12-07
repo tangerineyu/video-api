@@ -22,7 +22,7 @@ func main() {
 	socialRepo := repository.NewSocialRepository(database.DB)
 	msgRepo := repository.NewMessageRepository(database.DB)
 
-	userService := service.NewUserService(userRepo, database.RDB, database.Ctx)
+	userService := service.NewUserService(userRepo, socialRepo, database.RDB, database.Ctx)
 	videoService := service.NewVideoService(userRepo, videoRepo, database.RDB, database.Ctx)
 	interactionService := service.NewInteractionService(interactionRepo, userRepo, database.RDB, database.Ctx)
 	socialService := service.NewSocialService(socialRepo, userRepo, database.RDB, database.Ctx)

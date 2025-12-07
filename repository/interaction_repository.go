@@ -69,7 +69,7 @@ func (r interactionRepository) DeleteComment(commentID uint, videoID uint) error
 	})
 }
 
-func (r interactionRepository) GetCommentsByVideoID(commentID uint) (*model.Comment, error) {
+func (r interactionRepository) GetCommentsByID(commentID uint) (*model.Comment, error) {
 	var comment model.Comment
 	err := r.db.First(&comment, commentID).Error
 	return &comment, err
@@ -93,7 +93,7 @@ type InteractionRepository interface {
 	//
 	CreateComment(comment *model.Comment) error
 	DeleteComment(commentID uint, videoID uint) error
-	GetCommentsByVideoID(videoID uint) (*model.Comment, error)
+	GetCommentsByID(videoID uint) (*model.Comment, error)
 	GetCommentList(videoID uint) ([]model.Comment, error)
 	//
 }

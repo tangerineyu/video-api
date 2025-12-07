@@ -104,17 +104,24 @@ func (i *InteractionService) CommentAction(userID, videoID uint, actionType int,
 			CreatedDateBase: comment.CreatedAt.Format("01-02"),
 		}, nil
 	}
-	comment, err := i.InteractionRepo.GetCommentsByVideoID(commentID)
-	if err != nil {
-		return nil, errors.New("comment not found")
+	//删除评论
+	if actionType == 2 {
+		//评论是否存在
+		comment, err := i.InteractionRepo.GetCommentsByID(commentID)
+		if err != nil {
+			return nil, errors.New("comment not found")
+		}
+		//检查评论的ID与当前请求者的ID
+		if comment.UserID != userID {
+			return nil, errors.New("unauthorized to delete this comment")
+		}
+		if err := i.InteractionRepo.DeleteComment(commentID, videoID); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
-	if comment.UserID != userID {
-		return nil, errors.New("unauthorized to delete this comment")
-	}
-	if err := i.InteractionRepo.DeleteComment(commentID, videoID); err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return nil, errors.New("无效的操作类型")
+
 }
 
 func NewInteractionService(interactionRepo repository.InteractionRepository, userRepo repository.IUserRepository, rdb *redis.Client, ctx context.Context) IInteractionService {
