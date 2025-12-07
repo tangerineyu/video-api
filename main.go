@@ -4,6 +4,7 @@ import (
 	"video-api/database"
 	"video-api/handler"
 	"video-api/pkg/config"
+	"video-api/pkg/log"
 	"video-api/pkg/ws"
 	"video-api/repository"
 	"video-api/router"
@@ -12,6 +13,9 @@ import (
 
 func main() {
 	config.Init()
+	log.Init()
+	defer log.Log.Sync()
+	log.Log.Info("项目正在启动")
 	database.InitDB()
 	database.InitRedis()
 	//启动webSocket管理器

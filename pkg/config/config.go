@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -11,6 +12,7 @@ type Config struct {
 	MySQL  MySQLConfig  `mapstructure:"mysql"`
 	Redis  RedisConfig  `mapstructure:"redis"`
 	JWT    JWTConfig    `mapstructure:"jwt"`
+	OSS    OSSConfig    `mapstructure:"oss"`
 	//MinIO MinIOConfig `mapstructure:"minio"`
 }
 type ServerConfig struct {
@@ -38,6 +40,13 @@ type MinIOConfig struct {
 	SecretKey string `mapstructure:"secret_key"`
 	Bucket    string `mapstructure:"bucket"`
 }
+type OSSConfig struct {
+	Endpoint  string `mapstructure:"endpoint"`
+	AccessKey string `mapstructure:"access_key"`
+	SecretKey string `mapstructure:"secret_key"`
+	Bucket    string `mapstructure:"bucket"`
+	Domain    string `mapstructure:"domain"`
+}
 
 var Conf = new(Config)
 
@@ -45,8 +54,10 @@ func Init() {
 	viper.SetConfigFile("./config.yaml")
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("读取配置文件失败：%v", err)
+		log.Fatalf("读取配置文件失败,尝试读取环境变量：%v", err)
 	}
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.Unmarshal(Conf); err != nil {
 		log.Fatalf("解析配置文件失败：%v", err)

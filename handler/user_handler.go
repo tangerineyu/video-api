@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
+	"video-api/pkg/log"
+	"video-api/pkg/upload"
+
 	//"video-api/model"
 	//"video-api/repository"
 	"video-api/service"
@@ -26,6 +26,7 @@ func NewUserHandler(svc service.IUserService) *UserHandler {
 func getUserID(c *gin.Context) (uint, bool) {
 	userIDVal, exist := c.Get("userID")
 	if !exist {
+		log.Log.Error("获取用户信息失败")
 		Error(c, http.StatusUnauthorized, "AUTH_ERROR", "无法获取用户信息")
 		return 0, false
 	}
@@ -57,15 +58,16 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 	resq, err := h.userService.Login(&req)
 	if err != nil {
+		log.Log.Error("用户登录失败")
 		Error(c, http.StatusConflict, "LOGIN_ERROR", err.Error())
 	}
 	Success(c, http.StatusOK, resq)
 }
 func (h *UserHandler) GetUserInfo(c *gin.Context) {
-	fmt.Println("5.进入了Handler")
+	//fmt.Println("5.进入了Handler")
 	currentUserId, _ := getUserID(c)
-	val, exists := c.Get("user_id")
-	fmt.Println("6.Handler中获取的user_id：", val, "是否存在：", exists)
+	//val, exists := c.Get("user_id")
+	//fmt.Println("6.Handler中获取的user_id：", val, "是否存在：", exists)
 	targetUserIDstr := c.Query("user_id")
 	if targetUserIDstr == "" {
 		Error(c, http.StatusBadRequest, "Auth_FAILD", "缺少user_id")
@@ -90,25 +92,13 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 		Error(c, http.StatusBadRequest, "UPLOAD_FAILD", err.Error())
 		return
 	}
-	//构建路径
-	filename := fmt.Sprintf("%d-%s", userID, file.Filename)
-	saveDir := "./uploads/avatar/"
-	dst := filepath.Join(saveDir, filename)
-	//确保目录存在
-	fmt.Println("保存头像的路径：", dst)
-	if err := os.MkdirAll(saveDir, 0755); err != nil {
-		Error(c, http.StatusInternalServerError, "FILE_SAVE_ERROR", "文件创建失败")
-		return
-	}
-	if err := c.SaveUploadedFile(file, dst); err != nil {
-		fmt.Println("保存文件出错：", err)
-		Error(c, http.StatusInternalServerError, "UPLOAD_FAILD", "文件保存失败")
-		return
-	}
-	avatarURL := "/static/avatars/" + filename
-	// 更新数据库里面的avatar字段
-	if err := h.userService.UploadAvatar(userID, avatarURL); err != nil {
+	avatarURL, err := upload.UploadToOSS(file, userID)
+	if err != nil {
 		Error(c, http.StatusInternalServerError, "UPLOAD_FAILD", err.Error())
+		return
+	}
+	if err := h.userService.UploadAvatar(userID, avatarURL); err != nil {
+		Error(c, http.StatusInternalServerError, "DB_UPLOAD_ERROR", "数据更新失败")
 		return
 	}
 	Success(c, http.StatusOK, gin.H{"avatar_url": avatarURL})
