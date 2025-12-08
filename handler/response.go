@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"video-api/pkg/errno"
 )
 
 type ErrorResponse struct {
@@ -19,35 +20,46 @@ type Pagination struct {
 	PageSize    int   `json:"page_size"`
 }
 
-func Success(c *gin.Context, httpStatus int, data interface{}) {
-	c.JSON(httpStatus, gin.H{
-		"success": true,
-		"data":    data,
-	})
+// 负责把errno和data拼在一起
+// 如果data是一个map，平铺
+// 不是就塞进data字段，Error只返回错误吗和消息，,Success返回一个对象，符合SendResponse
+func SendResponse(c *gin.Context, err errno.ErrNo, data interface{}) {
+	resp := gin.H{
+		"status_code": err.StatusCode,
+		"status_msg":  err.StatusMsg,
+	}
+	if data != nil {
+		if m, ok := data.(map[string]interface{}); ok {
+			for k, v := range m {
+				resp[k] = v
+			}
+		} else if m, ok := data.(gin.H); ok {
+			for k, v := range m {
+				resp[k] = v
+			}
+		} else {
+			resp["data"] = data
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
-func SuccessList(c *gin.Context, data interface{}, meta interface{}) {
+
+func Success(c *gin.Context, data interface{}) {
+	SendResponse(c, errno.Success, data)
+}
+func SuccessList(c *gin.Context, list interface{}, meta interface{}) {
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    data,
-		"meta":    meta,
+		"status_code": errno.Success.StatusCode,
+		"status_msg":  errno.Success.StatusMsg,
+		"list":        list,
+		"meta":        meta,
 	})
 }
-func Error(c *gin.Context, httpStatus int, code string, message string) {
-	c.JSON(httpStatus, gin.H{
-		"success": false,
-		"error": ErrorResponse{
-			Code:    code,
-			Message: message,
-		},
-	})
+func Error(c *gin.Context, err errno.ErrNo) {
+	SendResponse(c, err, nil)
 }
-func ValidationError(c *gin.Context, code string, message string, details interface{}) {
-	c.JSON(http.StatusBadRequest, gin.H{
-		"success": false,
-		"error": ErrorResponse{
-			Code:    code,
-			Message: message,
-			Details: details,
-		},
-	})
+func ValidationError(c *gin.Context, detail string) {
+	err := errno.ParamErr //40001
+	err.StatusMsg += ": " + detail
+	SendResponse(c, err, nil)
 }

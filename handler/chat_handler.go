@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"video-api/pkg/errno"
+	"video-api/pkg/log"
 	"video-api/pkg/utils"
 	"video-api/pkg/ws"
 	"video-api/service"
@@ -115,8 +117,9 @@ func (h *ChatHandler) GetHistory(client *gin.Context) {
 
 	msgs, err := h.msgService.GetChatHistory(userID, uint(toUserID))
 	if err != nil {
-		Error(client, http.StatusInternalServerError, "DB_ERROR", err.Error())
+		log.Log.Error("获取聊天记录失败")
+		Error(client, errno.ServiceErr)
 		return
 	}
-	Success(client, http.StatusOK, msgs)
+	Success(client, msgs)
 }

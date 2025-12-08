@@ -1,15 +1,14 @@
 package handler
 
 import (
-	"fmt"
-	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
-	"time"
+	"video-api/pkg/errno"
+	"video-api/pkg/log"
+	"video-api/pkg/upload"
 	"video-api/service"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type VideoHandler struct {
@@ -29,28 +28,34 @@ func (h *VideoHandler) Publish(c *gin.Context) {
 	title := c.PostForm("title")
 	data, err := c.FormFile("data")
 	if err != nil {
-		Error(c, http.StatusBadRequest, "INVALID_PARAM", "无效的请求参数")
+		log.Log.Warn("无效的请求参数",
+			zap.String("video_title", title),
+			zap.Uint("user_id", userID),
+			zap.Error(err))
+		Error(c, errno.ParamErr)
 		return
 	}
-	filename := fmt.Sprintf("%d_%d_%s", userID, time.Now().UnixNano(), data.Filename)
-	videoSaveDir := "./uploads/videos/"
-	videoPath := filepath.Join(videoSaveDir, filename)
-	if err := os.MkdirAll(videoSaveDir, 0755); err != nil {
-		Error(c, http.StatusInternalServerError, "SERVER_ERROR", "服务器错误")
-		return
-	}
-	if err := c.SaveUploadedFile(data, videoPath); err != nil {
-		Error(c, http.StatusInternalServerError, "SAVE_FILE_ERROR", "保存文件失败")
-		return
-	}
-	coverPath := "./uploads/covers/" + filename + ".jpg"
-	playURL := "/static/videos/" + filename
-	err = h.videoService.PublishVideo(userID, title, playURL, coverPath)
+	playURL, err := upload.UploadToOSS(data, userID)
 	if err != nil {
-		Error(c, http.StatusInternalServerError, "PUBLISH_ERROR", "发布视频失败")
+		log.Log.Error("视频上传到OSS失败",
+			zap.String("filename", data.Filename),
+			zap.Uint("user_id", userID),
+			zap.Error(err))
+		Error(c, errno.ServiceErr)
 		return
 	}
-	Success(c, http.StatusOK, "视频发布成功")
+	coverURL := playURL + "?x-oss-process=video/snapshot,t_0,f_jpg"
+
+	err = h.videoService.PublishVideo(userID, title, playURL, coverURL)
+	if err != nil {
+		log.Log.Error("发布视频失败",
+			zap.String("playURL", playURL),
+			zap.Uint("user_id", userID),
+			zap.Error(err))
+		Error(c, errno.PublishErr)
+		return
+	}
+	Success(c, gin.H{"msg": "视频发布成功"})
 }
 func (h *VideoHandler) Feed(c *gin.Context) {
 	var userID uint = 0
@@ -64,10 +69,13 @@ func (h *VideoHandler) Feed(c *gin.Context) {
 	}
 	resp, err := h.videoService.Feed(latestTime, userID)
 	if err != nil {
-		Error(c, http.StatusInternalServerError, "DB_ERROR", "获取视频流失败")
+		log.Log.Error("获取视频流失败",
+			zap.Uint("user_id", userID),
+			zap.Error(err))
+		Error(c, errno.ServiceErr)
 		return
 	}
-	Success(c, http.StatusOK, resp)
+	Success(c, resp)
 
 }
 func (h *VideoHandler) List(c *gin.Context) {
@@ -79,23 +87,40 @@ func (h *VideoHandler) List(c *gin.Context) {
 	}
 	resp, err := h.videoService.GetPublishList(uint(targetUserID), currentUserID)
 	if err != nil {
-		Error(c, http.StatusInternalServerError, "DB_ERROR", "获取发布列表失败")
+		log.Log.Error("获取发布列表失败",
+			zap.String("target_user_id", targetUserIDstr),
+			zap.Uint("user_id", currentUserID),
+			zap.Error(err))
+		Error(c, errno.ServiceErr)
 		return
 	}
-	Success(c, http.StatusOK, resp)
+	Success(c, resp)
 }
 
 // POST /video/visit/:id
 func (h *VideoHandler) VisitVideo(c *gin.Context) {
 	idStr := c.Param("id")
-	id, _ := strconv.Atoi(idStr)
-	h.videoService.VisitVideo(uint(id))
-	Success(c, http.StatusOK, gin.H{"msg": "访问量增加成功"})
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		log.Log.Warn("访问视频ID无效",
+			zap.String("id_str", idStr))
+		Error(c, errno.ParamErr)
+		return
+	}
+	if err := h.videoService.VisitVideo(uint(id)); err != nil {
+		log.Log.Error("增加访问量失败",
+			zap.Int("video_id", id),
+			zap.Error(err))
+		Error(c, errno.ServiceErr)
+	}
+	Success(c, gin.H{"msg": "访问量增加成功"})
 }
 func (h *VideoHandler) PopularRank(c *gin.Context) {
 	resp, err := h.videoService.GetPopularRank()
 	if err != nil {
-		Error(c, http.StatusInternalServerError, "RANK_ERROR", "获取热门视频失败")
+		log.Log.Error("获取热门视频排行失败",
+			zap.Error(err))
+		Error(c, errno.ServiceErr)
 		return
 	}
 	SuccessList(c, resp.VideoList, nil)

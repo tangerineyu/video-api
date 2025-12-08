@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"net/http"
 	"strconv"
+	"video-api/pkg/errno"
 	"video-api/pkg/log"
 	"video-api/pkg/upload"
 
@@ -12,6 +12,7 @@ import (
 	"video-api/types"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -26,13 +27,19 @@ func NewUserHandler(svc service.IUserService) *UserHandler {
 func getUserID(c *gin.Context) (uint, bool) {
 	userIDVal, exist := c.Get("userID")
 	if !exist {
-		log.Log.Error("获取用户信息失败")
-		Error(c, http.StatusUnauthorized, "AUTH_ERROR", "无法获取用户信息")
+		log.Log.Error("Context中缺少userID",
+			zap.String("path", c.Request.URL.Path),
+			zap.String("ip", c.ClientIP()),
+		)
+		Error(c, errno.AuthorizationFailedErr)
 		return 0, false
 	}
 	userID, ok := userIDVal.(uint)
 	if !ok {
-		Error(c, http.StatusInternalServerError, "CONTEXT_ERROR", "用户信息格式错误")
+		log.Log.Error("userID类型断言失败",
+			zap.String("path", c.Request.URL.Path),
+			zap.Any("userID", userIDVal))
+		Error(c, errno.ServiceErr)
 		return 0, false
 	}
 	return userID, true
@@ -40,28 +47,48 @@ func getUserID(c *gin.Context) (uint, bool) {
 func (h *UserHandler) Register(c *gin.Context) {
 	var req types.RegisterRequest
 	if err := c.ShouldBind(&req); err != nil {
-		ValidationError(c, "INVALID", "错误的请求参数", err.Error())
+		log.Log.Warn("用户注册参数绑定失败",
+			zap.String("ip", c.ClientIP()),
+			zap.Error(err), // 记录具体是哪个字段错了
+		)
+
+		// 2. Response: 明确告诉前端参数错了 (40001)
+		// 这里的 err.Error() 会包含 "Field validation for 'Username' failed..." 等详细信息
+		SendResponse(c, errno.ParamErr, err.Error())
 		return
 	}
 	resq, err := h.userService.Register(&req)
 	if err != nil {
-		Error(c, http.StatusConflict, "REGISTER_FAILD", err.Error())
+		//		Error(c, http.StatusConflict, "REGISTER_FAILD", err.Error())
+		log.Log.Error("注册失败",
+			zap.String("username", req.Username),
+			zap.Error(err))
+		SendResponse(c, errno.RegisterErr, err.Error())
 		return
 	}
-	Success(c, http.StatusOK, resq)
+	Success(c, resq)
 }
 func (h *UserHandler) Login(c *gin.Context) {
 	var req types.LoginRequest
 	if err := c.ShouldBind(&req); err != nil {
-		ValidationError(c, "VALIDATION_ERROR", "参数错误", err.Error())
+		log.Log.Warn("参数错误")
+		Error(c, errno.ParamErr)
 		return
 	}
 	resq, err := h.userService.Login(&req)
 	if err != nil {
-		log.Log.Error("用户登录失败")
-		Error(c, http.StatusConflict, "LOGIN_ERROR", err.Error())
+		log.Log.Warn("用户登录失败",
+			zap.String("username", req.Username),
+			zap.String("ip", c.ClientIP()),
+			zap.Error(err),
+		)
+		Error(c, errno.LoginErr)
+		return
 	}
-	Success(c, http.StatusOK, resq)
+	log.Log.Info("用户登录成功",
+		zap.Uint("user_id", resq.UserID),
+		zap.String("username", req.Username))
+	Success(c, resq)
 }
 func (h *UserHandler) GetUserInfo(c *gin.Context) {
 	//fmt.Println("5.进入了Handler")
@@ -70,15 +97,21 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 	//fmt.Println("6.Handler中获取的user_id：", val, "是否存在：", exists)
 	targetUserIDstr := c.Query("user_id")
 	if targetUserIDstr == "" {
-		Error(c, http.StatusBadRequest, "Auth_FAILD", "缺少user_id")
+		log.Log.Warn("目标用户ID不存在",
+			zap.String("targetUserID", targetUserIDstr))
+		Error(c, errno.ParamErr)
 		return
 	}
 	targetUserID, _ := strconv.ParseUint(targetUserIDstr, 10, 64)
 	resq, err := h.userService.GetUserInfo(currentUserId, uint(targetUserID))
 	if err != nil {
-		Error(c, http.StatusNotFound, "USER_NOT_FOUND", err.Error())
+		log.Log.Warn("用户不存在",
+			zap.String("targetUserID", targetUserIDstr),
+			zap.Error(err))
+		Error(c, errno.UserNotFoundErr)
+		return
 	}
-	Success(c, http.StatusOK, resq)
+	Success(c, resq)
 }
 func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	//获取userid
@@ -89,19 +122,28 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	}
 	file, err := c.FormFile("data")
 	if err != nil {
-		Error(c, http.StatusBadRequest, "UPLOAD_FAILD", err.Error())
+		log.Log.Warn("解析上传文件失败",
+			zap.Error(err))
+		Error(c, errno.FileUploadErr)
 		return
 	}
 	avatarURL, err := upload.UploadToOSS(file, userID)
 	if err != nil {
-		Error(c, http.StatusInternalServerError, "UPLOAD_FAILD", err.Error())
+		//Error(c, http.StatusInternalServerError, "UPLOAD_FAILD", err.Error())
+		log.Log.Error("OSS上传失败",
+			zap.Uint("user_id", userID),
+			zap.Error(err))
+		Error(c, errno.FileUploadErr)
 		return
 	}
 	if err := h.userService.UploadAvatar(userID, avatarURL); err != nil {
-		Error(c, http.StatusInternalServerError, "DB_UPLOAD_ERROR", "数据更新失败")
+		log.Log.Error("头像数据入库失败",
+			zap.String("url", avatarURL),
+			zap.Error(err))
+		Error(c, errno.ServiceErr)
 		return
 	}
-	Success(c, http.StatusOK, gin.H{"avatar_url": avatarURL})
+	Success(c, gin.H{"avatar_url": avatarURL})
 }
 
 // GET /user/mfa/qrcode
@@ -112,10 +154,11 @@ func (h *UserHandler) GenerateMFA(c *gin.Context) {
 	}
 	resp, err := h.userService.GenerateMFA(userId)
 	if err != nil {
-		Error(c, http.StatusInternalServerError, "MFA_GENERATE_FAILED", err.Error())
+		log.Log.Warn("MFA_GENERATE_FAILED")
+		Error(c, errno.MFAGenerateErr)
 		return
 	}
-	Success(c, http.StatusOK, resp)
+	Success(c, resp)
 }
 
 // POST /user/mfa/bind
@@ -126,15 +169,18 @@ func (h *UserHandler) BindMFA(c *gin.Context) {
 	}
 	var req types.MfaBindRequest
 	if err := c.ShouldBind(&req); err != nil {
-		ValidationError(c, "INVALID_PARAM", "无效的请求参数", err.Error())
+		log.Log.Warn("无效的请求参数")
+		//ValidationError(c, "INVALID_PARAM", "无效的请求参数", err.Error())
+		Error(c, errno.ParamErr)
 		return
 	}
 	err := h.userService.BindMFA(userId, req.Secret, req.Code)
 	if err != nil {
-		Error(c, http.StatusBadRequest, "MFA_BIND_FAILED", err.Error())
+		log.Log.Warn("MFA绑定失败")
+		Error(c, errno.MFABindErr)
 		return
 	}
-	Success(c, http.StatusOK, "MFA绑定成功")
+	Success(c, gin.H{"msg": "MFA绑定成功"})
 }
 
 // POST /tool/search_image
