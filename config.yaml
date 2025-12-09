@@ -1,5 +1,7 @@
 server:
   port: "8080"
+  run_mode: "debug"
+  upload_type: "minio"
 mysql:
   host: "127.0.0.1"
   port: "3306"
@@ -13,6 +15,11 @@ redis:
   db: 0
 jwt:
   secret: "my_super_secret_key_fanone"
+minio:
+  endpoint: "127.0.0.1:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  bucket: "videostorage"
 oss:
   endpoint: "oss-cn-hangzhou.aliyuncs.com"
   access_key: ""

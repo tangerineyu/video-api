@@ -10,7 +10,13 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
 
-func UploadToOSS(file *multipart.FileHeader, userID uint) (string, error) {
+type OSSUploader struct{}
+
+func NewOSSUploader() *OSSUploader {
+	return &OSSUploader{}
+}
+
+func (o *OSSUploader) UploadFile(file *multipart.FileHeader, userID uint, folder string) (string, error) {
 	cfg := config.Conf.OSS
 	client, err := oss.New(cfg.Endpoint, cfg.AccessKey, cfg.SecretKey)
 	if err != nil {
@@ -26,7 +32,7 @@ func UploadToOSS(file *multipart.FileHeader, userID uint) (string, error) {
 	}
 	defer src.Close()
 	ext := filepath.Ext(file.Filename)
-	objectName := fmt.Sprintf("%d/%d_%s_%s", userID, time.Now().Unix(), "file", ext)
+	objectName := fmt.Sprintf("%s/%d/%d_%s%s", folder, userID, time.Now().Unix(), "file", ext)
 	err = bucket.PutObject(objectName, src)
 	if err != nil {
 		return "", err

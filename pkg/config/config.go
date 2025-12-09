@@ -13,10 +13,11 @@ type Config struct {
 	Redis  RedisConfig  `mapstructure:"redis"`
 	JWT    JWTConfig    `mapstructure:"jwt"`
 	OSS    OSSConfig    `mapstructure:"oss"`
-	//MinIO MinIOConfig `mapstructure:"minio"`
+	MinIO  MinIOConfig  `mapstructure:"minio"`
 }
 type ServerConfig struct {
-	Port string `mapstructure:"PORT"`
+	Port       string `mapstructure:"PORT"`
+	UploadType string `mapstructure:"UPLOAD_TYPE"`
 }
 type MySQLConfig struct {
 	Host     string `mapstructure:"host"`

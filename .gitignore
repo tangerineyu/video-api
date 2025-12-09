@@ -3,7 +3,7 @@ config.yaml
 
 # 忽略上传的文件目录
 uploads/
-upload/
+
 # 忽略 IDE 配置
 .idea/
 .vscode/
