@@ -1,9 +1,11 @@
 # 忽略真实的配置文件
 config.yaml
-
+.env
 # 忽略上传的文件目录
 uploads/
 
 # 忽略 IDE 配置
 .idea/
 .vscode/
+video-api
+*.dll

@@ -1,0 +1,22 @@
+run:
+  timeout: 5m
+  modules-download-mode: mod
+linters:
+  disable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gocyclo
+    - goimports
+linters-setting:
+  gocycle:
+    min-complexity: 15
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
